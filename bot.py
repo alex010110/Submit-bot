@@ -13,9 +13,15 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# Role check
-def has_required_role():
+# Check role and channel
+def can_use_submit():
     async def predicate(interaction: discord.Interaction):
+        if interaction.channel.id != COMMAND_CHANNEL_ID:
+            await interaction.response.send_message(
+                f"❌ This command can only be used in <#{COMMAND_CHANNEL_ID}>!",
+                ephemeral=True
+            )
+            return False
         role = discord.utils.get(interaction.user.roles, name=REQUIRED_ROLE_NAME)
         if role is None:
             await interaction.response.send_message(
@@ -31,7 +37,7 @@ def has_required_role():
     description="Submit your art to the art submissions channel!",
     guild=discord.Object(id=GUILD_ID)
 )
-@has_required_role()
+@can_use_submit()
 @app_commands.describe(
     file="Upload your artwork file here",
     description="Describe your artwork"
@@ -56,28 +62,7 @@ async def submit(interaction: discord.Interaction, file: discord.Attachment, des
 
 @client.event
 async def on_ready():
-    guild = discord.Object(id=GUILD_ID)
-    # Sync the command only for this guild
-    await tree.sync(guild=guild)
+    await tree.sync(guild=discord.Object(id=GUILD_ID))
     print(f"Bot is online as {client.user}")
-
-    # Restrict the command to only COMMAND_CHANNEL_ID
-    for command in await tree.fetch_commands(guild=guild):
-        if command.name == "submit":
-            await command.edit(
-                guild=guild,
-                default_permission=False
-            )
-
-    # Give permission to the channel
-    guild_obj = client.get_guild(GUILD_ID)
-    if guild_obj:
-        channel = guild_obj.get_channel(COMMAND_CHANNEL_ID)
-        if channel:
-            perms = discord.PermissionOverwrite()
-            perms.send_messages = True
-            perms.use_application_commands = True
-            await channel.set_permissions(guild_obj.default_role, overwrite=None)  # remove default perms
-            await channel.set_permissions(guild_obj.get_role(guild_obj.me.top_role.id), overwrite=perms)  # bot perms
 
 client.run(TOKEN)
