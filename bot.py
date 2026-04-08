@@ -55,11 +55,10 @@ async def submit(interaction: discord.Interaction, file: discord.Attachment, des
 @client.event
 async def on_ready():
     guild = discord.Object(id=GUILD_ID)
-    
-    # Delete old guild commands to prevent duplicates
-    for cmd in await tree.fetch_commands(guild=guild):
-        await tree.delete_command(cmd.id, guild=guild)
-    
+
+    # Remove old submit commands to prevent duplicates
+    tree.remove_command("submit", guild=guild)
+
     await tree.sync(guild=guild)
     print(f"Bot is online as {client.user} and commands synced")
 
